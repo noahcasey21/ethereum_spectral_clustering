@@ -24,7 +24,7 @@ def degree_discount_transform(adj : np.array) -> np.array:
 def random_walk(adj : np.array) -> np.array:
     P, PI = get_markov_components(adj)
 
-    return (PI @ P + P.T @ PI) / 2
+    return (np.diag(PI) @ P + P.T @ np.diag(PI)) / 2
 
 def network_embedding(adj : np.array) -> np.array:
     '''
@@ -32,18 +32,19 @@ def network_embedding(adj : np.array) -> np.array:
     '''
     _, PI = get_markov_components(adj)
 
-    return PI - random_walk(adj)
+    return np.diag(PI) - random_walk(adj)
 
 def get_markov_components(adj : np.array) -> tuple:
-    P = adj / np.sum(adj, axis=0) #transition matrix
+    P = adj  #pseudo transition matrix
+
+    PI = np.ones(P.shape[0]) / P.shape[0]
     
-    A = np.transpose(P) - np.eye(P.shape[0])
-    A = np.vstack([A, np.ones(P.shape[0])])
+    for _ in range(1000):
+        PI_new = np.dot(PI, P)
 
-    b = np.zeros(P.shape[0])
-    b = np.append(b, 1)
-
-    PI = np.linalg.lstsq(A, b, rcond=None)[0]
+        if np.allclose(PI, PI_new):
+            break
+        PI = PI_new
 
     return P, PI
 
